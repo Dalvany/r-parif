@@ -1,0 +1,23 @@
+[package]
+name = "rparif"
+version = "0.1.0"
+authors = ["Dalvany <Dalvany@users.noreply.github.com>"]
+edition = "2018"
+description = "Library that allow to access AirParif services."
+repository = "https://github.com/Dalvany/r-parif"
+homepage = "https://github.com/Dalvany/r-parif"
+readme = "README.md"
+license = "MIT"
+keywords = ["pollution", "airparif"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+reqwest = { version = "0.10", features = ["blocking"] }
+json = "0.12"
+chrono = "0.4"
+log = "0.4.8"
+
+[dev-dependencies]
+httpmock = "0.3.5"
+env_logger = "0.7.1"

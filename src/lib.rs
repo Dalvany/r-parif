@@ -1,7 +1,41 @@
-//! This lib allow to access [Airparif](https://www.airparif.asso.fr/) indice pollution API.
+//! This lib allow to access [Airparif](https://www.airparif.asso.fr/) indice pollution API for Ile-de-France.
 //! It needs an [API key](https://www.airparif.asso.fr/rss/api) to work.
+//!
+//! Through the [client](./client/struct.RParifClient.html) it allows access to the following endpoints :
+//! * indice : it provides the global pollution index
+//! * indiceJour : it returns global and per pollutant indices for previous, current or next day
+//! * idxville : returns indice and pollutant for given cities for previous, current and next day
+//! * episode : returns pollution alerts
+//!
+//! # Examples
+//!
+//! Getting and displaying global pollution indices :
+//! ```rust,no_run
+//! use rparif::client::RParifClient;
+//!
+//! let client = RParifClient::new("my-api-key");
+//! let indices = client.index()?;
+//! for index in indices.into_iter() {
+//!     println!("{}", index);
+//! }
+//! # Ok::<(), rparif::error::RParifError>(())
+//! ```
+//!
+//! Fetching pollution alert :
+//! ```rust,no_run
+//! use rparif::client::RParifClient;
+//!
+//! let client = RParifClient::new("my-api-key");
+//! let episodes = client.episode()?;
+//! for episode in episodes.into_iter() {
+//!     println!("{}", episode);
+//! }
+//! # Ok::<(), rparif::error::RParifError>(())
+//! ```
 #[macro_use]
 extern crate log;
+#[cfg(feature = "serde")]
+extern crate serde;
 
 use crate::client::RParifClient;
 use crate::error::RParifError;

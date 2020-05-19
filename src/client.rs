@@ -36,12 +36,18 @@ impl RParifClient<'_> {
         }
     }
 
-    /// Constructor used for test with httpmock
-    pub fn new_test(url: &str) -> RParifClient {
+    /// Constructor used for test with httpmock. It use `http://localhost:5000`
+    /// as URL to call mock instead of real services
+    ///
+    /// # Arguments
+    ///
+    /// * `api_key` - any string
+    ///
+    pub fn new_test(api_key: &str) -> RParifClient {
         RParifClient {
             client: Client::new(),
-            api_key: "dummy",
-            base_url: url,
+            api_key,
+            base_url: "http://localhost:5000",
         }
     }
 

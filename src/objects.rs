@@ -5,11 +5,14 @@ use std::fmt;
 use std::str::FromStr;
 
 use chrono::NaiveDate;
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 use crate::error::RParifError;
 
 /// This struct represent a pollution index
-#[derive(Debug, PartialEq)]
+#[derive(Clone, PartialEq, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Index {
     /// Date of mesure
     date: NaiveDate,
@@ -95,7 +98,8 @@ pub enum Day {
 }
 
 /// Represent a pollution alert
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Clone, PartialEq, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct Episode {
     /// Alert date
     date: NaiveDate,
@@ -157,6 +161,16 @@ impl Episode {
     }
 }
 
+impl fmt::Display for Episode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} {:?} (detail : {:?})",
+            self.date, self.pollutants, self.detail
+        )
+    }
+}
+
 impl IntoIterator for Episode {
     type Item = PollutantEpisode;
     type IntoIter = PollutantEpisodeIter;
@@ -191,7 +205,8 @@ impl Iterator for PollutantEpisodeIter {
 }
 
 /// Details of pollution alert
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Clone, PartialEq, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct PollutantEpisode {
     /// Name of the pollutant o3, no2, so2, pm10
     pollutant: String,
@@ -225,8 +240,19 @@ impl PollutantEpisode {
     }
 }
 
+impl fmt::Display for PollutantEpisode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{} : {:?} {:?} {:?}",
+            self.pollutant, self.kind, self.level, self.criteria
+        )
+    }
+}
+
 /// Level of pollution alert
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Clone, PartialEq, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Level {
     Info,
     Alert,
@@ -250,7 +276,8 @@ impl FromStr for Level {
 }
 
 /// Type of alert
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Clone, PartialEq, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Type {
     /// alert was forecast
     Forecast,
@@ -273,7 +300,8 @@ impl FromStr for Type {
 }
 
 /// Criteria that can raise an alert
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Clone, PartialEq, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Criteria {
     /// More than 100km²
     Area,
@@ -291,6 +319,49 @@ impl FromStr for Criteria {
             Ok(Criteria::Population)
         } else {
             Err(RParifError::UnkownEnumValue(s.to_string()))
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::objects::{Criteria, Episode, Level, Type};
+
+    use super::chrono::{Datelike, NaiveDate, Utc};
+
+    #[test]
+    fn test_episode_iterator() {
+        let today = Utc::today();
+        let mut episode = Episode::new(
+            NaiveDate::from_ymd_opt(today.year(), today.month(), today.day()).unwrap(),
+            None,
+        );
+        episode.add(
+            "o3".to_string(),
+            Type::Observed,
+            Level::Info,
+            vec![Criteria::Area, Criteria::Population],
+        );
+        episode.add(
+            "so2".to_string(),
+            Type::Observed,
+            Level::Alert,
+            vec![Criteria::Population],
+        );
+        episode.add(
+            "no2".to_string(),
+            Type::Observed,
+            Level::Normal,
+            vec![Criteria::Area],
+        );
+
+        let mut i: usize = 0;
+        for pollution_episode in episode.clone() {
+            assert_eq!(
+                pollution_episode,
+                episode.pollutants().get(i).unwrap().clone()
+            );
+            i += 1;
         }
     }
 }

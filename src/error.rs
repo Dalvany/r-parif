@@ -50,9 +50,9 @@ impl fmt::Display for RParifError {
         use RParifError::*;
 
         match self {
-            RequestError(err) => write!(f, "Error calling HTTP API : {}", err),
-            JsonError(err) => write!(f, "Error parsing JSON response : {}", err),
-            DateParseError(err) => write!(f, "Error parsing date : {}", err),
+            RequestError(err) => err.fmt(f),
+            JsonError(err) => err.fmt(f),
+            DateParseError(err) => err.fmt(f),
             UnkownEnumValue(token) => {
                 write!(f, "Error parsing enum valu : unexpected value {}", token)
             }

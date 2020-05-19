@@ -26,7 +26,7 @@ fn test_indice() {
             {\"date\":\"demain\",\"indice\":70,\"url_carte\":\"http://localhost:5000/services/cartes/indice/date/demain\"}]")
         .create();
 
-    let client = RParifClient::new_test("http://localhost:5000");
+    let client = RParifClient::new_test("dummy");
     let result = client.index();
 
     assert_eq!(search_mock.times_called(), 1);
@@ -75,7 +75,7 @@ fn test_indice_day() {
             \"pm10\":{\"indice\":125,\"url_carte\":\"http://localhost:5000/services/cartes/indice/date/hier/pol/PM10\"}}")
         .create();
 
-    let client = RParifClient::new_test("http://localhost:5000");
+    let client = RParifClient::new_test("dummy");
     let result = client.index_day(Day::Today);
 
     assert_eq!(search_mock.times_called(), 1);
@@ -128,7 +128,7 @@ fn test_indice_city() {
             {\"indice\":95,\"polluants\":[\"o3\",\"no2\",\"pm10\"]}}]")
         .create();
 
-    let client = RParifClient::new_test("http://localhost:5000");
+    let client = RParifClient::new_test("dummy");
     let result = client.index_city(vec!["75120", "94038"]);
 
     assert_eq!(search_mock.times_called(), 1);
@@ -199,7 +199,7 @@ fn test_episode() {
             {\"date\":\"demain\",\"detail\":\"\"}]")
         .create();
 
-    let client = RParifClient::new_test("http://localhost:5000");
+    let client = RParifClient::new_test("dummy");
     let result = client.episode();
 
     assert_eq!(search_mock.times_called(), 1);
@@ -251,41 +251,4 @@ fn test_episode() {
     expected.push(episode);
 
     assert_eq!(result.ok(), Some(expected));
-}
-
-#[test]
-#[with_mock_server]
-fn test_episode_iterator() {
-    let today = Utc::today();
-    let mut episode = Episode::new(
-        NaiveDate::from_ymd_opt(today.year(), today.month(), today.day()).unwrap(),
-        None,
-    );
-    episode.add(
-        "o3".to_string(),
-        Type::Observed,
-        Level::Info,
-        vec![Criteria::Area, Criteria::Population],
-    );
-    episode.add(
-        "so2".to_string(),
-        Type::Observed,
-        Level::Alert,
-        vec![Criteria::Population],
-    );
-    episode.add(
-        "no2".to_string(),
-        Type::Observed,
-        Level::Normal,
-        vec![Criteria::Area],
-    );
-
-    let mut i: usize = 0;
-    for pollution_episode in episode.clone() {
-        assert_eq!(
-            pollution_episode,
-            episode.pollutants().get(i).unwrap().clone()
-        );
-        i += 1;
-    }
 }

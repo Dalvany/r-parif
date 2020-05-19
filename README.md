@@ -6,11 +6,15 @@ It needs an [API key](https://www.airparif.asso.fr/rss/api) to work.
 
 # API
 
-Allow to access :
+It allows access to :
 * indice : it provides the global pollution index
 * indiceJour : it returns global and per pollutant indices for previous, current or next day
 * idxville : returns indice and pollutant for given cities for previous, current and next day
 * episode : returns pollution alerts
+
+# Serde
+
+With serde feature, data structures implemente Serde's `Serialize` and `Deserialize`
 
 # Examples
 
@@ -18,18 +22,15 @@ Allow to access :
 extern crate rparif;
 
 use rparif::client::RParifClient;
+use rparif::error::RParifError;
 
-fn main() {
+fn main() -> Result<(), RParifError> {
     let client = RParifClient::new("my-api-key");
-    let result = client.index();
-
-    if result.is_err() {
-        println!("Error : {:?}", result.err())
-    } else {
-        for index in result.ok().unwrap().into_iter() {
-            println!("{}", index);
-        }
+    let indices = client.index()?;
+    for index in indices.into_iter() {
+        println!("{}", index);
     }
+    Ok(())
 }
 ```
 With a valid API key :

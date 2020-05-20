@@ -6,7 +6,6 @@ use chrono::{Date, Duration, NaiveDate, Utc};
 use json::JsonValue;
 use reqwest::blocking::Client;
 use reqwest::blocking::Response;
-use reqwest::Error as RequestError;
 
 use crate::error::RParifError;
 use crate::objects::{Criteria, Day, Episode, Index};
@@ -177,28 +176,21 @@ impl RParifClient<'_> {
     ///
     /// * [RParifError::CallError](../error/enum.RParifError.html#variant.CallError) when HTTP status is
     /// other than 2XX. It contains the URL called, the HTTP status and the body response
-    fn execute_query(&self, url: &str) -> Result<String, RParifError> {
-        let response: Result<Response, RequestError> = self.client.get(url).send();
+    ///
+    /// * [RParifError::JsonError](../error/enum.RParifError.html#variant.JsonError) if response isn't a well
+    /// formed JSON
+    fn execute_query(&self, url: &str) -> Result<JsonValue, RParifError> {
+        let response: Response = self.client.get(url).send()?;
+        let body: JsonValue = json::parse(response.text()?.as_str())?;
 
-        match response {
-            Err(error) => Err(RParifError::RequestError(error)),
-            Ok(data) => {
-                if data.status().is_success() {
-                    data.text()
-                        .or_else(|error| Err(RParifError::RequestError(error)))
-                } else {
-                    let status = data.status().as_u16();
-                    data.text()
-                        .or_else(|error| Err(RParifError::RequestError(error)))
-                        .and_then(|text| {
-                            Err(RParifError::CallError {
-                                url: url.to_string(),
-                                body: text,
-                                status,
-                            })
-                        })
-                }
-            }
+        if response.status().is_success() {
+            Ok(body)
+        } else {
+            Err(RParifError::CallError {
+                url: url.to_string(),
+                body: body.dump(),
+                status: response.status().as_u16(),
+            })
         }
     }
 
@@ -445,11 +437,9 @@ impl RParifClient<'_> {
     pub fn index(&self) -> Result<Vec<Index>, RParifError> {
         debug!("Querying indice endpoint");
         // api key is not really needed here...
-        let response: String =
+        let response: JsonValue =
             self.execute_query(format!("{}/indice?key={}", self.base_url, self.api_key).as_str())?;
-        self.index_to_index(
-            json::parse(response.as_str()).or_else(|error| Err(RParifError::JsonError(error)))?,
-        )
+        self.index_to_index(response)
     }
 
     /// Retrieve index pollution (global and per pollutant) for a given date (previous day, current or next day) using
@@ -486,16 +476,14 @@ impl RParifClient<'_> {
             Day::Today => "jour",
             Day::Tomorrow => "demain",
         };
-        let response: String = self.execute_query(
+        let response: JsonValue = self.execute_query(
             format!(
                 "{}/indiceJour?date={}&key={}",
                 self.base_url, tmp, self.api_key
             )
             .as_str(),
         )?;
-        self.index_day_to_index(
-            json::parse(response.as_str()).or_else(|error| Err(RParifError::JsonError(error)))?,
-        )
+        self.index_day_to_index(response)
     }
 
     /// Allow to get pollution indices for multiple cities through `idxville` endpoint.  
@@ -528,16 +516,14 @@ impl RParifClient<'_> {
     pub fn index_city(&self, cities: Vec<&str>) -> Result<Vec<Index>, RParifError> {
         debug!("Querying idxville endpoint");
         let cities = cities.join(",");
-        let response: String = self.execute_query(
+        let response: JsonValue = self.execute_query(
             format!(
                 "{}/idxville?villes={}&key={}",
                 self.base_url, cities, self.api_key
             )
             .as_str(),
         )?;
-        self.idxville_to_index(
-            json::parse(response.as_str()).or_else(|error| Err(RParifError::JsonError(error)))?,
-        )
+        self.idxville_to_index(response)
     }
 
     /// List pollution alert for previous day, current day and next day using `episode` endpoint
@@ -566,10 +552,8 @@ impl RParifClient<'_> {
     /// formed JSON
     pub fn episode(&self) -> Result<Vec<Episode>, RParifError> {
         debug!("Querying episode endpoint");
-        let response: String =
+        let response: JsonValue =
             self.execute_query(format!("{}/episode?key={}", self.base_url, self.api_key).as_str())?;
-        self.episode_to_episode(
-            json::parse(response.as_str()).or_else(|error| Err(RParifError::JsonError(error)))?,
-        )
+        self.episode_to_episode(response)
     }
 }

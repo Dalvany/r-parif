@@ -99,3 +99,24 @@ impl error::Error for RParifError {
         }
     }
 }
+
+#[doc(hidden)]
+impl From<RequestError> for RParifError {
+    fn from(err: RequestError) -> Self {
+        RParifError::RequestError(err)
+    }
+}
+
+#[doc(hidden)]
+impl From<JsonError> for RParifError {
+    fn from(err: JsonError) -> Self {
+        RParifError::JsonError(err)
+    }
+}
+
+#[doc(hidden)]
+impl From<ParseError> for RParifError {
+    fn from(err: ParseError) -> Self {
+        RParifError::DateParseError(err)
+    }
+}

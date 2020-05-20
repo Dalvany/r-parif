@@ -181,15 +181,17 @@ impl RParifClient<'_> {
     /// formed JSON
     fn execute_query(&self, url: &str) -> Result<JsonValue, RParifError> {
         let response: Response = self.client.get(url).send()?;
-        let body: JsonValue = json::parse(response.text()?.as_str())?;
+        let status: u16 = response.status().as_u16();
+        let ok: bool = response.status().is_success();
+        let data: JsonValue = json::parse(response.text()?.as_str())?;
 
-        if response.status().is_success() {
-            Ok(body)
+        if ok {
+            Ok(data)
         } else {
             Err(RParifError::CallError {
                 url: url.to_string(),
-                body: body.dump(),
-                status: response.status().as_u16(),
+                body: data.dump(),
+                status,
             })
         }
     }
@@ -557,3 +559,6 @@ impl RParifClient<'_> {
         self.episode_to_episode(response)
     }
 }
+
+#[cfg(test)]
+mod test {}

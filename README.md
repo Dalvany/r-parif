@@ -17,6 +17,11 @@ It allows access to :
 With serde feature, data structures implemente Serde's `Serialize` and `Deserialize`
 
 # Examples
+Cargo.toml
+```toml
+[dependencies]
+rparif = "0.1"
+```
 
 ```rust,no_run
 extern crate rparif;

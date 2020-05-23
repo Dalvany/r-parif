@@ -33,6 +33,10 @@
 //! # Ok::<(), rparif::error::RParifError>(())
 //! ```
 #![doc(html_root_url = "https://docs.rs/rparif/0.1.0/")]
+// macro use for unit test
+#[cfg(test)]
+#[macro_use]
+extern crate json;
 #[macro_use]
 extern crate log;
 #[cfg(feature = "serde")]

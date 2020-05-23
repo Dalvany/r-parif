@@ -38,6 +38,8 @@ impl Index {
     /// * `pollutants` - List of pollutant
     ///
     /// * `index` - Index of pollution
+    ///
+    /// * `insee` - INSEE code of a city
     pub fn new(
         date: NaiveDate,
         url: Option<String>,

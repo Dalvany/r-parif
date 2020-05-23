@@ -67,7 +67,7 @@ impl fmt::Display for RParifError {
                 json: ref actual,
             } => write!(
                 f,
-                "Unexpected type value in JSON : expected an {} but got {}",
+                "Unexpected type value in JSON : expected {} but got {} which is not a number",
                 expected, actual
             ),
             CallError {

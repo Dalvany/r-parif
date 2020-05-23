@@ -273,8 +273,7 @@ impl RParifClient<'_> {
 
         // Getting date from json
         let date = self.get_string_value("date", &json)?;
-        let date: NaiveDate = NaiveDate::parse_from_str(date, "%d/%m/%Y")
-            .or_else(|error| Err(RParifError::DateParseError(error)))?;
+        let date: NaiveDate = NaiveDate::parse_from_str(date, "%d/%m/%Y")?;
         debug!("Date : {}", date);
 
         for (key, value) in json.entries() {
@@ -561,4 +560,620 @@ impl RParifClient<'_> {
 }
 
 #[cfg(test)]
-mod test {}
+mod test {
+    extern crate httpmock;
+
+    use chrono::Datelike;
+    use httpmock::Method::GET;
+    use httpmock::{mock, with_mock_server};
+
+    use crate::objects::{Level, Type};
+
+    use super::reqwest::Url;
+    use super::*;
+
+    #[test]
+    // Return yesterday
+    fn test_convert_json_to_date_hier() {
+        let client = RParifClient::new("api-key");
+        let json = JsonValue::String("hier".to_string());
+        let result = client.convert_json_to_date(&json);
+
+        let expected = Utc::today();
+        let expected = expected.checked_sub_signed(Duration::days(1));
+        assert!(result.is_ok(), "Convert JSON 'hier' fails");
+        assert_eq!(result.ok(), expected);
+    }
+
+    #[test]
+    // Return today
+    fn test_convert_json_to_date_jour() {
+        let client = RParifClient::new("api-key");
+        let json = JsonValue::String("jour".to_string());
+        let result = client.convert_json_to_date(&json);
+
+        let expected = Utc::today();
+        assert!(result.is_ok(), "Convert JSON 'jour' fails");
+        assert_eq!(result.ok(), Some(expected));
+    }
+
+    #[test]
+    // Return tomorrow
+    fn test_convert_json_to_date_demain() {
+        let client = RParifClient::new("api-key");
+        let json = JsonValue::String("demain".to_string());
+        let result = client.convert_json_to_date(&json);
+
+        let expected = Utc::today();
+        let expected = expected.checked_add_signed(Duration::days(1));
+        assert!(result.is_ok(), "Convert JSON 'demain' fails");
+        assert_eq!(result.ok(), expected);
+    }
+
+    #[test]
+    // Return an error because date isn't 'hier', 'jour' or 'demain'
+    fn test_convert_json_to_date_wrong() {
+        let client = RParifClient::new("api-key");
+        let json = JsonValue::String("wrong string".to_string());
+        let result = client.convert_json_to_date(&json);
+
+        assert!(result.is_err(), "Convert JSON 'wrong string' should fails");
+        match result.err().unwrap() {
+            RParifError::UnexpectedDate(s) => assert_eq!(s, "\"wrong string\"".to_string()),
+            _ => panic!("Wrong error"),
+        }
+    }
+
+    #[test]
+    // Return yesterday day
+    fn test_convert_string_to_date_hier() {
+        let client = RParifClient::new("api-key");
+        let result = client.convert_string_to_date("hier");
+
+        let expected = Utc::today();
+        let expected = expected.checked_sub_signed(Duration::days(1));
+        assert!(result.is_ok(), "Convert string 'hier' fails");
+        assert_eq!(result.ok(), expected);
+    }
+
+    #[test]
+    // Return today
+    fn test_convert_string_to_date_jour() {
+        let client = RParifClient::new("api-key");
+        let result = client.convert_string_to_date("jour");
+
+        let expected = Utc::today();
+        assert!(result.is_ok(), "Convert string 'jour' fails");
+        assert_eq!(result.ok(), Some(expected));
+    }
+
+    #[test]
+    // Return tomorrow
+    fn test_convert_string_to_date_demain() {
+        let client = RParifClient::new("api-key");
+        let result = client.convert_string_to_date("demain");
+
+        let expected = Utc::today();
+        let expected = expected.checked_add_signed(Duration::days(1));
+        assert!(result.is_ok(), "Convert string 'demain' fails");
+        assert_eq!(result.ok(), expected);
+    }
+
+    #[test]
+    // Return an error because date isn't 'hier', 'jour' or 'demain'
+    fn test_convert_string_to_date_wrong() {
+        let client = RParifClient::new("api-key");
+        let result = client.convert_string_to_date("wrong string");
+
+        assert!(
+            result.is_err(),
+            "Convert string 'wrong string' should fails"
+        );
+        match result.err().unwrap() {
+            RParifError::UnexpectedDate(s) => assert_eq!(s, "wrong string".to_string()),
+            _ => panic!("Wrong error"),
+        }
+    }
+
+    #[test]
+    // Get number value from JSON return an error because
+    // the JSON key doesn't exists
+    fn test_get_number_value_no_key() {
+        let client = RParifClient::new("api-key");
+        let data = object! {
+            wrong_key: 12
+        };
+
+        let result = client.get_number_value("key", &data);
+
+        assert!(result.is_err());
+        match result.err().unwrap() {
+            RParifError::MissingJsonKey { key, json } => {
+                assert_eq!(key, "key".to_string());
+                assert_eq!(json, "{\"wrong_key\":12}")
+            }
+            _ => panic!("Wrong error"),
+        }
+    }
+
+    #[test]
+    // Get number value from JSON return an error because
+    // the value is not a string
+    fn test_get_number_value_wrong_type() {
+        let client = RParifClient::new("api-key");
+        let data = object! {
+            key: "wrong type"
+        };
+
+        let result = client.get_number_value("key", &data);
+
+        assert!(result.is_err());
+        match result.err().unwrap() {
+            RParifError::WrongJsonType { expected, json } => {
+                assert_eq!(expected, "number".to_string());
+                assert_eq!(json, "\"wrong type\"")
+            }
+            _ => panic!("Wrong error"),
+        }
+    }
+
+    #[test]
+    // Get number value from JSON ok
+    fn test_get_number_value() {
+        let client = RParifClient::new("api-key");
+        let data = object! {
+            key: 12
+        };
+
+        let result = client.get_number_value("key", &data);
+        assert!(result.is_ok());
+        assert_eq!(result.ok(), Some(12));
+    }
+
+    #[test]
+    // Get string value from JSON return an error because
+    // the JSON key doesn't exists
+    fn test_get_string_value_no_key() {
+        let client = RParifClient::new("api-key");
+        let data = object! {
+            wrong_key: "data"
+        };
+
+        let result = client.get_string_value("key", &data);
+
+        assert!(result.is_err());
+        match result.err().unwrap() {
+            RParifError::MissingJsonKey { key, json } => {
+                assert_eq!(key, "key".to_string());
+                assert_eq!(json, "{\"wrong_key\":\"data\"}")
+            }
+            _ => panic!("Wrong error"),
+        }
+    }
+
+    #[test]
+    // Get string value from JSON return an error because
+    // the value is not a string
+    fn test_get_string_value_wrong_type() {
+        let client = RParifClient::new("api-key");
+        let data = object! {
+            key: 12
+        };
+
+        let result = client.get_string_value("key", &data);
+
+        assert!(result.is_err());
+        match result.err().unwrap() {
+            RParifError::WrongJsonType { expected, json } => {
+                assert_eq!(expected, "string".to_string());
+                assert_eq!(json, "12")
+            }
+            _ => panic!("Wrong error"),
+        }
+    }
+
+    #[test]
+    // Get string value from JSON ok
+    fn test_get_string_value() {
+        let client = RParifClient::new("api-key");
+        let data = object! {
+            key: "data"
+        };
+
+        let result = client.get_string_value("key", &data);
+        assert!(result.is_ok());
+        assert_eq!(result.ok(), Some("data"));
+    }
+
+    #[test]
+    // Call return an error because reqwest return an error
+    fn test_execute_query_reqwest_error() {
+        let client = RParifClient::new("api-key");
+        let result = client.execute_query("http://localhost:5001");
+
+        assert!(result.is_err());
+        match result.err().unwrap() {
+            RParifError::RequestError(err) => {
+                assert_eq!(
+                    err.url(),
+                    Some(&Url::parse("http://localhost:5001").unwrap())
+                );
+            }
+            _ => panic!("Wrong error"),
+        }
+    }
+
+    #[test]
+    #[with_mock_server]
+    // Call return an error because the result is not a well formed JSON
+    fn test_execute_query_reqwest_not_json() {
+        let _search_mock = mock(GET, "/path")
+            .return_status(200)
+            .return_body("this is not a json")
+            .create();
+
+        let client = RParifClient::new("api-key");
+        let result = client.execute_query("http://localhost:5000/path");
+
+        assert!(result.is_err());
+        match result.err().unwrap() {
+            RParifError::JsonError(err) => {
+                assert_eq!(format!("{}", err), "Unexpected character: h at (1:2)")
+            }
+            _ => panic!("Wrong error"),
+        }
+    }
+
+    #[test]
+    #[with_mock_server]
+    // Call return an error because status is different from 2xx
+    fn test_execute_query_reqwest_wrong_status() {
+        let _search_mock = mock(GET, "/path")
+            .return_status(300)
+            .return_body("{\"data\":0}")
+            .create();
+
+        let client = RParifClient::new("api-key");
+        let result = client.execute_query("http://localhost:5000/path");
+
+        assert!(result.is_err());
+        match result.err().unwrap() {
+            RParifError::CallError { url, body, status } => {
+                assert_eq!(url, "http://localhost:5000/path".to_string());
+                assert_eq!(body, "{\"data\":0}".to_string());
+                assert_eq!(status, 300);
+            }
+            _ => panic!("Wrong error"),
+        }
+    }
+
+    #[test]
+    #[with_mock_server]
+    // Call OK
+    fn test_execute_query_reqwest() {
+        let _search_mock = mock(GET, "/path")
+            .return_status(200)
+            .return_body("{\"data\":0}")
+            .create();
+
+        let client = RParifClient::new("api-key");
+        let result = client.execute_query("http://localhost:5000/path");
+
+        assert_eq!(
+            result.ok(),
+            Some(object! {
+                data: 0
+            })
+        )
+    }
+
+    #[test]
+    fn test_index_to_index() {
+        let client = RParifClient::new("api-key");
+        let data = array![{
+               date: "jour",
+               indice: 35,
+               url_carte: "a"
+        }];
+
+        let result = client.index_to_index(data);
+
+        assert!(result.is_ok());
+        assert_eq!(
+            result.ok(),
+            Some(vec![Index::new(
+                Utc::today().naive_utc(),
+                Some("a".to_string()),
+                vec!["global".to_string()],
+                35,
+                None,
+            )])
+        );
+    }
+
+    #[test]
+    fn test_index_to_index_not_an_array() {
+        let client = RParifClient::new("api-key");
+        let data = object! {
+               date: "jour",
+               indice: 35,
+               url_carte: "a"
+        };
+
+        let result = client.index_to_index(data);
+        assert!(result.is_err());
+        match result.err().unwrap() {
+            RParifError::WrongJsonType { expected, json } => {
+                assert_eq!(expected, "array".to_string());
+                assert_eq!(
+                    json,
+                    r#"{"date":"jour","indice":35,"url_carte":"a"}"#.to_string()
+                )
+            }
+            _ => panic!("Wrong error"),
+        };
+    }
+
+    #[test]
+    fn test_index_day_to_index() {
+        let client = RParifClient::new("api-key");
+        let data = object! {
+            date: "31/12/2019",
+            global: object! {
+                indice: 35,
+                url_carte: "a"
+            },
+            o3: object! {
+                indice: 40,
+                url_carte: "b"
+            },
+        };
+        let expected = Some(vec![
+            Index::new(
+                NaiveDate::from_ymd(2019, 12, 31),
+                Some("a".to_string()),
+                vec!["global".to_string()],
+                35,
+                None,
+            ),
+            Index::new(
+                NaiveDate::from_ymd(2019, 12, 31),
+                Some("b".to_string()),
+                vec!["o3".to_string()],
+                40,
+                None,
+            ),
+        ]);
+
+        let result = client.index_day_to_index(data);
+        assert!(result.is_ok());
+        assert_eq!(result.ok(), expected);
+    }
+
+    #[test]
+    fn test_idxville_to_index() {
+        let client = RParifClient::new("api-key");
+        let data = array![
+            {
+                ninsee: "75101",
+                hier: {
+                    indice: 25,
+                    polluants: ["no2", "pm10"]
+                },
+                jour: {
+                    indice: 50,
+                    polluants: ["pm10"]
+                },
+                demain: {
+                    indice: 36,
+                    polluants: ["o3"]
+                },
+            },
+            {
+                ninsee: "94028",
+                hier: {
+                    indice: 100,
+                    polluants: ["no2"]
+                },
+                jour: {
+                    indice: 40,
+                    polluants: ["o3"]
+                },
+                demain: {
+                    indice: 95,
+                    polluants: ["o3","no2","pm10"]
+                },
+            }
+        ];
+
+        let result = client.idxville_to_index(data);
+
+        let today = Utc::today();
+        let yesterday = today.checked_sub_signed(Duration::days(1)).unwrap();
+        let tomorrow = today.checked_add_signed(Duration::days(1)).unwrap();
+        let expected = vec![
+            Index::new(
+                NaiveDate::from_ymd_opt(yesterday.year(), yesterday.month(), yesterday.day())
+                    .unwrap(),
+                None,
+                vec!["no2".to_string(), "pm10".to_string()],
+                25,
+                Some("75101".to_string()),
+            ),
+            Index::new(
+                NaiveDate::from_ymd_opt(today.year(), today.month(), today.day()).unwrap(),
+                None,
+                vec!["pm10".to_string()],
+                50,
+                Some("75101".to_string()),
+            ),
+            Index::new(
+                NaiveDate::from_ymd_opt(tomorrow.year(), tomorrow.month(), tomorrow.day()).unwrap(),
+                None,
+                vec!["o3".to_string()],
+                36,
+                Some("75101".to_string()),
+            ),
+            Index::new(
+                NaiveDate::from_ymd_opt(yesterday.year(), yesterday.month(), yesterday.day())
+                    .unwrap(),
+                None,
+                vec!["no2".to_string()],
+                100,
+                Some("94028".to_string()),
+            ),
+            Index::new(
+                NaiveDate::from_ymd_opt(today.year(), today.month(), today.day()).unwrap(),
+                None,
+                vec!["o3".to_string()],
+                40,
+                Some("94028".to_string()),
+            ),
+            Index::new(
+                NaiveDate::from_ymd_opt(tomorrow.year(), tomorrow.month(), tomorrow.day()).unwrap(),
+                None,
+                vec!["o3".to_string(), "no2".to_string(), "pm10".to_string()],
+                95,
+                Some("94028".to_string()),
+            ),
+        ];
+
+        assert!(result.is_ok());
+        assert_eq!(result.ok(), Some(expected));
+    }
+
+    #[test]
+    fn test_idxville_to_index_not_an_array() {
+        let client = RParifClient::new("api-key");
+        let data = object! {
+               date: "jour",
+               indice: 35,
+               url_carte: "a"
+        };
+
+        let result = client.idxville_to_index(data);
+        assert!(result.is_err());
+        match result.err().unwrap() {
+            RParifError::WrongJsonType { expected, json } => {
+                assert_eq!(expected, "array".to_string());
+                assert_eq!(
+                    json,
+                    r#"{"date":"jour","indice":35,"url_carte":"a"}"#.to_string()
+                )
+            }
+            _ => panic!("Wrong error"),
+        };
+    }
+
+    #[test]
+    fn test_episode_to_episode() {
+        let client = RParifClient::new("api-key");
+        let data = array![
+             {
+                date: "hier",
+                detail: "",
+                o3: {
+                    type: "constate",
+                    niveau: "info",
+                    criteres: ["km","pop"]
+                },
+                so2: {
+                    type: "constate",
+                    niveau: "alerte",
+                    criteres: ["pop"]
+
+                }
+             },
+             {
+                date: "jour",
+                detail: "Il est conseillé d'éviter les déplacements en Ile de France",
+                no2: {
+                    type: "constate",
+                    niveau: "normal",
+                    criteres: ["km"]
+                },
+                so2: {
+                    type: "constate",
+                    niveau: "alerte",
+                    criteres: ["km"]
+                }
+             },
+             {
+                date: "demain",
+                detail:""
+             }
+        ];
+
+        let result = client.episode_to_episode(data);
+
+        let today = Utc::today();
+        let yesterday = today.checked_sub_signed(Duration::days(1)).unwrap();
+        let tomorrow = today.checked_add_signed(Duration::days(1)).unwrap();
+        let mut expected = Vec::new();
+        let mut episode = Episode::new(
+            NaiveDate::from_ymd_opt(yesterday.year(), yesterday.month(), yesterday.day()).unwrap(),
+            None,
+        );
+        episode.add(
+            "o3".to_string(),
+            Type::Observed,
+            Level::Info,
+            vec![Criteria::Area, Criteria::Population],
+        );
+        episode.add(
+            "so2".to_string(),
+            Type::Observed,
+            Level::Alert,
+            vec![Criteria::Population],
+        );
+        expected.push(episode);
+        let mut episode = Episode::new(
+            NaiveDate::from_ymd_opt(today.year(), today.month(), today.day()).unwrap(),
+            Some("Il est conseillé d'éviter les déplacements en Ile de France".to_string()),
+        );
+        episode.add(
+            "no2".to_string(),
+            Type::Observed,
+            Level::Normal,
+            vec![Criteria::Area],
+        );
+        episode.add(
+            "so2".to_string(),
+            Type::Observed,
+            Level::Alert,
+            vec![Criteria::Area],
+        );
+        expected.push(episode);
+        let episode = Episode::new(
+            NaiveDate::from_ymd_opt(tomorrow.year(), tomorrow.month(), tomorrow.day()).unwrap(),
+            None,
+        );
+        expected.push(episode);
+
+        assert!(result.is_ok());
+        assert_eq!(result.ok(), Some(expected));
+    }
+
+    #[test]
+    fn test_episode_to_episode_not_an_array() {
+        let client = RParifClient::new("api-key");
+        let data = object! {
+        date: "jour",
+        indice: 35,
+        url_carte: "a"
+        };
+
+        let result = client.episode_to_episode(data);
+        assert!(result.is_err());
+        match result.err().unwrap() {
+            RParifError::WrongJsonType { expected, json } => {
+                assert_eq!(expected, "array".to_string());
+                assert_eq!(
+                    json,
+                    r#"{"date":"jour","indice":35,"url_carte":"a"}"#.to_string()
+                )
+            }
+            _ => panic!("Wrong error"),
+        };
+    }
+}

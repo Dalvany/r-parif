@@ -138,49 +138,50 @@ fn test_indice_city() {
     let yesterday = today.checked_sub_signed(Duration::days(1)).unwrap();
     let tomorrow = today.checked_add_signed(Duration::days(1)).unwrap();
 
-    let mut expected = Vec::new();
-    expected.push(Index::new(
-        NaiveDate::from_ymd_opt(yesterday.year(), yesterday.month(), yesterday.day()).unwrap(),
-        None,
-        vec!["no2".to_string(), "pm10".to_string()],
-        25,
-        Some("75101".to_string()),
-    ));
-    expected.push(Index::new(
-        NaiveDate::from_ymd_opt(today.year(), today.month(), today.day()).unwrap(),
-        None,
-        vec!["pm10".to_string()],
-        50,
-        Some("75101".to_string()),
-    ));
-    expected.push(Index::new(
-        NaiveDate::from_ymd_opt(tomorrow.year(), tomorrow.month(), tomorrow.day()).unwrap(),
-        None,
-        vec!["o3".to_string()],
-        36,
-        Some("75101".to_string()),
-    ));
-    expected.push(Index::new(
-        NaiveDate::from_ymd_opt(yesterday.year(), yesterday.month(), yesterday.day()).unwrap(),
-        None,
-        vec!["no2".to_string()],
-        100,
-        Some("94028".to_string()),
-    ));
-    expected.push(Index::new(
-        NaiveDate::from_ymd_opt(today.year(), today.month(), today.day()).unwrap(),
-        None,
-        vec!["o3".to_string()],
-        40,
-        Some("94028".to_string()),
-    ));
-    expected.push(Index::new(
-        NaiveDate::from_ymd_opt(tomorrow.year(), tomorrow.month(), tomorrow.day()).unwrap(),
-        None,
-        vec!["o3".to_string(), "no2".to_string(), "pm10".to_string()],
-        95,
-        Some("94028".to_string()),
-    ));
+    let expected = vec![
+        Index::new(
+            NaiveDate::from_ymd_opt(yesterday.year(), yesterday.month(), yesterday.day()).unwrap(),
+            None,
+            vec!["no2".to_string(), "pm10".to_string()],
+            25,
+            Some("75101".to_string()),
+        ),
+        Index::new(
+            NaiveDate::from_ymd_opt(today.year(), today.month(), today.day()).unwrap(),
+            None,
+            vec!["pm10".to_string()],
+            50,
+            Some("75101".to_string()),
+        ),
+        Index::new(
+            NaiveDate::from_ymd_opt(tomorrow.year(), tomorrow.month(), tomorrow.day()).unwrap(),
+            None,
+            vec!["o3".to_string()],
+            36,
+            Some("75101".to_string()),
+        ),
+        Index::new(
+            NaiveDate::from_ymd_opt(yesterday.year(), yesterday.month(), yesterday.day()).unwrap(),
+            None,
+            vec!["no2".to_string()],
+            100,
+            Some("94028".to_string()),
+        ),
+        Index::new(
+            NaiveDate::from_ymd_opt(today.year(), today.month(), today.day()).unwrap(),
+            None,
+            vec!["o3".to_string()],
+            40,
+            Some("94028".to_string()),
+        ),
+        Index::new(
+            NaiveDate::from_ymd_opt(tomorrow.year(), tomorrow.month(), tomorrow.day()).unwrap(),
+            None,
+            vec!["o3".to_string(), "no2".to_string(), "pm10".to_string()],
+            95,
+            Some("94028".to_string()),
+        ),
+    ];
 
     assert_eq!(result.ok(), Some(expected));
 }

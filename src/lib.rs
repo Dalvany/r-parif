@@ -1,4 +1,4 @@
-//! This lib allow to access [Airparif](https://www.airparif.asso.fr/) indice pollution API for Ile-de-France.
+//! This lib allow to access [Airparif](https://www.airparif.asso.fr/) indice pollution API for Ile-de-France (France).
 //! It needs an [API key](https://www.airparif.asso.fr/rss/api) to work.
 //!
 //! Through the [client](./client/struct.RParifClient.html) it allows access to the following endpoints :

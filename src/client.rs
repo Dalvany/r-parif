@@ -11,6 +11,7 @@ use crate::error::RParifError;
 use crate::objects::{Criteria, Day, Episode, Index};
 
 /// Client to call HTTP API
+#[derive(Debug)]
 pub struct RParifClient<'a> {
     /// HTTP client
     client: Client,

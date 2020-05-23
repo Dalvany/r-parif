@@ -18,7 +18,7 @@ pub struct Index {
     date: NaiveDate,
     /// An url (if any) to a map show the global pollution
     url: Option<String>,
-    /// Polluants (could be global, o3, no2, pm10, so2)
+    /// Pollutants (could be global, o3, no2, pm10, so2)
     pollutants: Vec<String>,
     /// Index
     index: u32,
@@ -40,6 +40,8 @@ impl Index {
     /// * `index` - Index of pollution
     ///
     /// * `insee` - INSEE code of a city
+    // Is this usefull to make a builder ?
+    // see https://rust-lang.github.io/api-guidelines/type-safety.html#builders-enable-construction-of-complex-values-c-builder
     pub fn new(
         date: NaiveDate,
         url: Option<String>,

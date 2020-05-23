@@ -8,7 +8,7 @@ documentation = "https://docs.rs/rparif/"
 repository = "https://github.com/Dalvany/r-parif"
 homepage = "https://github.com/Dalvany/r-parif"
 readme = "README.md"
-license = "MIT"
+license = "MIT OR Apache-2.0"
 keywords = ["pollution", "airparif"]
 categories = ["api-bindings"]
 

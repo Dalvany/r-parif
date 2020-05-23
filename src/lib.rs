@@ -32,7 +32,7 @@
 //! }
 //! # Ok::<(), rparif::error::RParifError>(())
 //! ```
-#![doc(html_root_url = "https://docs.rs/rparif/0.1.0/")]
+#![doc(html_root_url = "https://docs.rs/rparif/0.1.1/")]
 // macro use for unit test
 #[cfg(test)]
 #[macro_use]

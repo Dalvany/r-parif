@@ -4,6 +4,7 @@ version = "0.1.1"
 authors = ["Dalvany <Dalvany@users.noreply.github.com>"]
 edition = "2018"
 description = "Library that allow to access AirParif services."
+documentation = "https://docs.rs/rparif/"
 repository = "https://github.com/Dalvany/r-parif"
 homepage = "https://github.com/Dalvany/r-parif"
 readme = "README.md"

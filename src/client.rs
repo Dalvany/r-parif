@@ -1,7 +1,5 @@
 //! Client that allow to make request to AirParif services and
 //! convert JSON result into objects
-extern crate reqwest;
-
 use chrono::{Date, Duration, NaiveDate, Utc};
 use json::JsonValue;
 use reqwest::blocking::Client;
@@ -562,15 +560,13 @@ impl RParifClient<'_> {
 
 #[cfg(test)]
 mod test {
-    extern crate httpmock;
-
     use chrono::Datelike;
     use httpmock::Method::GET;
     use httpmock::{mock, with_mock_server};
+    use reqwest::Url;
 
     use crate::objects::{Level, Type};
 
-    use super::reqwest::Url;
     use super::*;
 
     #[test]

@@ -1,6 +1,4 @@
 //! Several objects used to represent pollution index and alerts
-extern crate chrono;
-
 use std::fmt;
 use std::str::FromStr;
 
@@ -95,9 +93,13 @@ impl fmt::Display for Index {
 }
 
 /// Represent a date as use in the HTTP API
+#[derive(Clone, PartialEq, Hash, Debug, Copy)]
 pub enum Day {
+    /// Variant for yesterday
     Yesterday,
+    /// Variant for today
     Today,
+    /// Variant for tomorrow
     Tomorrow,
 }
 
@@ -188,6 +190,7 @@ impl IntoIterator for Episode {
 }
 
 /// Allow to iterate through PollutantEpisode of an Episode
+#[derive(Clone, PartialEq, Hash, Debug)]
 pub struct PollutantEpisodeIter {
     episode: Episode,
     i: usize,
@@ -255,11 +258,14 @@ impl fmt::Display for PollutantEpisode {
 }
 
 /// Level of pollution alert
-#[derive(Clone, PartialEq, Hash, Debug)]
+#[derive(Clone, PartialEq, Hash, Debug, Copy)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Level {
+    /// Information level
     Info,
+    /// Alert level
     Alert,
+    /// Normal level
     Normal,
 }
 
@@ -280,7 +286,7 @@ impl FromStr for Level {
 }
 
 /// Type of alert
-#[derive(Clone, PartialEq, Hash, Debug)]
+#[derive(Clone, PartialEq, Hash, Debug, Copy)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Type {
     /// alert was forecast
@@ -304,7 +310,7 @@ impl FromStr for Type {
 }
 
 /// Criteria that can raise an alert
-#[derive(Clone, PartialEq, Hash, Debug)]
+#[derive(Clone, PartialEq, Hash, Debug, Copy)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum Criteria {
     /// More than 100km²
@@ -329,9 +335,9 @@ impl FromStr for Criteria {
 
 #[cfg(test)]
 mod test {
-    use crate::objects::{Criteria, Episode, Level, Type};
+    use chrono::{Datelike, NaiveDate, Utc};
 
-    use super::chrono::{Datelike, NaiveDate, Utc};
+    use crate::objects::{Criteria, Episode, Level, Type};
 
     #[test]
     fn test_episode_iterator() {

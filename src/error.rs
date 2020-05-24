@@ -6,6 +6,7 @@ use chrono::ParseError;
 use json::Error as JsonError;
 use reqwest::Error as RequestError;
 
+/// Errors that can be raised
 #[derive(Debug)]
 pub enum RParifError {
     /// Error from reqwest lib

@@ -33,6 +33,18 @@
 //! # Ok::<(), rparif::error::RParifError>(())
 //! ```
 #![doc(html_root_url = "https://docs.rs/rparif/0.1.1/")]
+#![deny(missing_docs)]
+#![cfg_attr(test, deny(warnings))]
+#![warn(
+    missing_copy_implementations,
+    missing_debug_implementations,
+    missing_docs,
+    trivial_numeric_casts,
+    unsafe_code,
+    unused_extern_crates,
+    unused_import_braces,
+    unused_qualifications
+)]
 // macro use for unit test
 #[cfg(test)]
 #[macro_use]

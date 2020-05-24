@@ -12,6 +12,8 @@ It allows access to :
 * idxville : returns indice and pollutant for given cities for previous, current and next day
 * episode : returns pollution alerts
 
+Documentation can be found [here](https://docs.rs/rparif/)
+
 # Serde
 
 With serde feature, data structures implemente Serde's `Serialize` and `Deserialize`

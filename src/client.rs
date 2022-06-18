@@ -40,12 +40,13 @@ impl RParifClient<'_> {
     /// # Arguments
     ///
     /// * `api_key` - any string
+    /// * `base_url` - base URL
     ///
-    pub fn new_test(api_key: &str) -> RParifClient {
+    pub fn new_test<'a>(api_key: &'a str,base_url: &'a str) -> RParifClient<'a> {
         RParifClient {
             client: Client::new(),
             api_key,
-            base_url: "http://localhost:5000",
+            base_url,
         }
     }
 
@@ -481,7 +482,7 @@ impl RParifClient<'_> {
                 "{}/indiceJour?date={}&key={}",
                 self.base_url, tmp, self.api_key
             )
-            .as_str(),
+                .as_str(),
         )?;
         self.index_day_to_index(response)
     }
@@ -521,7 +522,7 @@ impl RParifClient<'_> {
                 "{}/idxville?villes={}&key={}",
                 self.base_url, cities, self.api_key
             )
-            .as_str(),
+                .as_str(),
         )?;
         self.idxville_to_index(response)
     }
@@ -562,7 +563,7 @@ impl RParifClient<'_> {
 mod test {
     use chrono::Datelike;
     use httpmock::Method::GET;
-    use httpmock::{mock, with_mock_server};
+    use httpmock::MockServer;
     use reqwest::Url;
 
     use crate::objects::{Level, Type};
@@ -801,16 +802,18 @@ mod test {
     }
 
     #[test]
-    #[with_mock_server]
     // Call return an error because the result is not a well formed JSON
     fn test_execute_query_reqwest_not_json() {
-        let _search_mock = mock(GET, "/path")
-            .return_status(200)
-            .return_body("this is not a json")
-            .create();
+        let server = MockServer::start();
+        let _search_mock = server.mock(|when, then| {
+            when.method(GET)
+                .path("/path");
+            then.status(200)
+                .body("this is not a json");
+        });
 
         let client = RParifClient::new("api-key");
-        let result = client.execute_query("http://localhost:5000/path");
+        let result = client.execute_query(&server.url("/path"));
 
         assert!(result.is_err());
         match result.err().unwrap() {
@@ -822,21 +825,23 @@ mod test {
     }
 
     #[test]
-    #[with_mock_server]
     // Call return an error because status is different from 2xx
     fn test_execute_query_reqwest_wrong_status() {
-        let _search_mock = mock(GET, "/path")
-            .return_status(300)
-            .return_body("{\"data\":0}")
-            .create();
+        let server = MockServer::start();
+        let _search_mock = server.mock(|when, then| {
+            when.method(GET)
+                .path("/path");
+            then.status(300)
+                .body("{\"data\":0}");
+        });
 
         let client = RParifClient::new("api-key");
-        let result = client.execute_query("http://localhost:5000/path");
+        let result = client.execute_query(&server.url("/path"));
 
         assert!(result.is_err());
         match result.err().unwrap() {
             RParifError::CallError { url, body, status } => {
-                assert_eq!(url, "http://localhost:5000/path".to_string());
+                assert_eq!(url, server.url("/path"));
                 assert_eq!(body, "{\"data\":0}".to_string());
                 assert_eq!(status, 300);
             }
@@ -845,16 +850,18 @@ mod test {
     }
 
     #[test]
-    #[with_mock_server]
     // Call OK
     fn test_execute_query_reqwest() {
-        let _search_mock = mock(GET, "/path")
-            .return_status(200)
-            .return_body("{\"data\":0}")
-            .create();
+        let server = MockServer::start();
+        let _search_mock = server.mock(|when, then| {
+            when.method(GET)
+                .path("/path");
+            then.status(200)
+                .body("{\"data\":0}");
+        });
 
         let client = RParifClient::new("api-key");
-        let result = client.execute_query("http://localhost:5000/path");
+        let result = client.execute_query(&server.url("/path"));
 
         assert_eq!(
             result.ok(),

@@ -5,7 +5,7 @@ extern crate rparif;
 
 use chrono::{Datelike, Duration, NaiveDate, Utc};
 use httpmock::Method::GET;
-use httpmock::{mock, with_mock_server};
+use httpmock::prelude::*;
 
 use rparif::client::RParifClient;
 use rparif::objects::{Criteria, Day, Episode, Index, Level, Type};
@@ -15,22 +15,26 @@ fn init() {
 }
 
 #[test]
-#[with_mock_server]
 fn test_indice() {
     init();
-    let search_mock = mock(GET, "/indice")
-        .expect_query_param("key", "dummy")
-        .return_status(200)
-        .return_body("[{\"date\":\"hier\",\"indice\":35,\"url_carte\":\"http://localhost:5000/services/cartes/indice/date/hier\"},\
-            {\"date\":\"jour\",\"indice\":50,\"url_carte\":\"http://localhost:5000/services/cartes/indice/date/jour\"},\
-            {\"date\":\"demain\",\"indice\":70,\"url_carte\":\"http://localhost:5000/services/cartes/indice/date/demain\"}]")
-        .create();
 
-    let client = RParifClient::new_test("dummy");
+    let server = MockServer::start();
+    let search_mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/indice")
+            .query_param("key", "dummy");
+        then.status(200)
+            .body("[{\"date\":\"hier\",\"indice\":35,\"url_carte\":\"http://localhost:5000/services/cartes/indice/date/hier\"},\
+            {\"date\":\"jour\",\"indice\":50,\"url_carte\":\"http://localhost:5000/services/cartes/indice/date/jour\"},\
+            {\"date\":\"demain\",\"indice\":70,\"url_carte\":\"http://localhost:5000/services/cartes/indice/date/demain\"}]");
+    });
+
+    let base_url = &server.base_url();
+    let client = RParifClient::new_test("dummy", base_url);
     let result = client.index();
 
-    assert_eq!(search_mock.times_called(), 1);
-    assert!(result.is_ok(), format!("Got an Err() : {:?}", result));
+    search_mock.assert();
+    assert!(result.is_ok(), "Got an Err() : {:?}", result);
     let today = Utc::today();
     let yesterday = today.checked_sub_signed(Duration::days(1)).unwrap();
     let tomorrow = today.checked_add_signed(Duration::days(1)).unwrap();
@@ -61,25 +65,29 @@ fn test_indice() {
 }
 
 #[test]
-#[with_mock_server]
 fn test_indice_day() {
     init();
-    let search_mock = mock(GET, "/indiceJour")
-        .expect_query_param("key", "dummy")
-        .expect_query_param("date", "jour")
-        .return_status(200)
-        .return_body("{\"date\":\"09/08/2012\",\"global\":{\"indice\":35,\"url_carte\":\
+
+    let server = MockServer::start();
+    let search_mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/indiceJour")
+            .query_param("key", "dummy")
+            .query_param("date", "jour");
+        then.status(200)
+            .body("{\"date\":\"09/08/2012\",\"global\":{\"indice\":35,\"url_carte\":\
             \"http://localhost:5000/services/cartes/indice/date/hier\"},\"o2\":{\"indice\":20,\
             \"url_carte\":\"http://localhost:5000/services/cartes/indice/date/hier/pol/O2\"},\
             \"o3\":{\"indice\":86,\"url_carte\":\"http://localhost:5000/services/cartes/indice/date/hier/pol/O3\"},\
-            \"pm10\":{\"indice\":125,\"url_carte\":\"http://localhost:5000/services/cartes/indice/date/hier/pol/PM10\"}}")
-        .create();
+            \"pm10\":{\"indice\":125,\"url_carte\":\"http://localhost:5000/services/cartes/indice/date/hier/pol/PM10\"}}");
+    });
 
-    let client = RParifClient::new_test("dummy");
+    let base_url = &server.base_url();
+    let client = RParifClient::new_test("dummy", base_url);
     let result = client.index_day(Day::Today);
 
-    assert_eq!(search_mock.times_called(), 1);
-    assert!(result.is_ok(), format!("Got an Err() : {:?}", result));
+    search_mock.assert();
+    assert!(result.is_ok(), "Got an Err() : {:?}", result);
 
     let mut expected = Vec::new();
     expected.push(Index::new(
@@ -115,24 +123,28 @@ fn test_indice_day() {
 }
 
 #[test]
-#[with_mock_server]
 fn test_indice_city() {
     init();
-    let search_mock = mock(GET, "/idxville")
-        .expect_query_param("key", "dummy")
-        .expect_query_param("villes", "75120,94038")
-        .return_status(200)
-        .return_body("[{\"ninsee\":\"75101\",\"hier\":{\"indice\":25,\"polluants\":[\"no2\",\"pm10\"]},\"jour\":\
+
+    let server = MockServer::start();
+    let search_mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/idxville")
+            .query_param("key", "dummy")
+            .query_param("villes", "75120,94038");
+        then.status(200)
+            .body("[{\"ninsee\":\"75101\",\"hier\":{\"indice\":25,\"polluants\":[\"no2\",\"pm10\"]},\"jour\":\
             {\"indice\":50,\"polluants\":[\"pm10\"]},\"demain\":{\"indice\":36,\"polluants\":[\"o3\"]}},{\"ninsee\":\"94028\",\
             \"hier\":{\"indice\":100,\"polluants\":[\"no2\"]},\"jour\":{\"indice\":40,\"polluants\":[\"o3\"]},\"demain\":\
-            {\"indice\":95,\"polluants\":[\"o3\",\"no2\",\"pm10\"]}}]")
-        .create();
+            {\"indice\":95,\"polluants\":[\"o3\",\"no2\",\"pm10\"]}}]");
+    });
 
-    let client = RParifClient::new_test("dummy");
+    let base_url = &server.base_url();
+    let client = RParifClient::new_test("dummy", base_url);
     let result = client.index_city(vec!["75120", "94038"]);
 
-    assert_eq!(search_mock.times_called(), 1);
-    assert!(result.is_ok(), format!("Got an Err() : {:?}", result));
+    search_mock.assert();
+    assert!(result.is_ok(), "Got an Err() : {:?}", result);
 
     let today = Utc::today();
     let yesterday = today.checked_sub_signed(Duration::days(1)).unwrap();
@@ -187,24 +199,28 @@ fn test_indice_city() {
 }
 
 #[test]
-#[with_mock_server]
 fn test_episode() {
     init();
-    let search_mock = mock(GET, "/episode")
-        .expect_query_param("key", "dummy")
-        .return_status(200)
-        .return_body("[{\"date\":\"hier\",\"o3\":{\"type\":\"constate\",\"niveau\":\"info\",\"criteres\":\
+
+    let server = MockServer::start();
+    let search_mock = server.mock(|when, then| {
+        when.method(GET)
+            .path("/episode")
+            .query_param("key", "dummy");
+        then.status(200)
+            .body("[{\"date\":\"hier\",\"o3\":{\"type\":\"constate\",\"niveau\":\"info\",\"criteres\":\
             [\"km\",\"pop\"]},\"so2\":{\"type\":\"constate\",\"niveau\":\"alerte\",\"criteres\":[\"pop\"]},\"detail\":\"\"},\
             {\"date\":\"jour\",\"no2\":{\"type\":\"constate\",\"niveau\":\"normal\",\"criteres\":[\"km\"]},\"so2\":{\"type\":\
             \"constate\",\"niveau\":\"alerte\",\"criteres\":[\"km\"]},\"detail\":\"Il est conseillé d'éviter les déplacements en Ile de France\"},\
-            {\"date\":\"demain\",\"detail\":\"\"}]")
-        .create();
+            {\"date\":\"demain\",\"detail\":\"\"}]");
+    });
 
-    let client = RParifClient::new_test("dummy");
+    let base_url = &server.base_url();
+    let client = RParifClient::new_test("dummy", base_url);
     let result = client.episode();
 
-    assert_eq!(search_mock.times_called(), 1);
-    assert!(result.is_ok(), format!("Got an Err() : {:?}", result));
+    search_mock.assert();
+    assert!(result.is_ok(), "Got an Err() : {:?}", result);
 
     let today = Utc::today();
     let yesterday = today.checked_sub_signed(Duration::days(1)).unwrap();

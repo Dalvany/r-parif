@@ -4,6 +4,10 @@ A Rust library that allows access [Airparif](https://www.airparif.asso.fr/) indi
 pollution API for Ile-de-France (France).  
 It needs an [API key](https://www.airparif.asso.fr/rss/api) to work.
 
+## Note
+
+This project won't be maintained anymore.
+
 # API
 
 It allows access to :
